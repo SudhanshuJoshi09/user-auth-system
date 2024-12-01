@@ -50,4 +50,86 @@ docker run -d --name redis-container -p 6379:6379 redis:latest
 
 ## Usage
 
+### 1. **Signup**
+Create a new user by providing `name`, `email`, and `password`.
 
+```bash
+curl --location 'localhost:8082/signup' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "sudhanshu12",
+    "email": "asdfasdfasdfasdf@gmail.com",
+    "password": "something12"
+}'
+```
+
+### Response
+- Status Code: 201 Created
+- Body
+```json
+{
+    "UserId": 21,
+    "message": "User created successfuly"
+}
+```
+
+### 2. **Login**
+Login with `email` and `password` to get user Authorization header.
+```bash
+curl --location 'localhost:8082/signin' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "asdfasdfasdasdf@gmail.com",
+    "password": "something12"
+}'
+```
+
+### Response
+- Status Code: 200 OK
+- Body
+```json
+{
+    "message": "User logged in successfuly",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFzZGZhc2RmYXNkYXNkZkBnbWFpbC5jb20iLCJleHAiOjE3MzMwNjcwMjF9.IHUMo2t62Mh9PuHnMCRazXbvdjLf5_MKDV7he6XbqpE"
+}
+```
+
+### 3. **Logout/Revoke**
+Logout from account using authorization header.
+- Header {Authorization: Login Token}
+```bash
+curl --location 'localhost:8082/signout' \
+--header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFzZGZhc2RmYXNkYXNkZkBnbWFpbC5jb20iLCJleHAiOjE3MzMwNjcwMDF9.uM4yf06UufB9W9lo1V5TPT0u2NDHifYk5VJqunIJdlU' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "asdfasdfasdasdf@gmail.com",
+    "password": "something12"
+
+}'
+```
+
+### Response
+- Status Code: 200 OK
+- Body:
+```json
+{
+    "message": "User has logged out successfuly"
+}
+```
+### 4. **Refresh Token**
+Refresh token using current authorization header.
+- Header {Authorization: Login Token}
+```bash
+curl --location --request POST 'localhost:8082/refresh' \
+--header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFzZGZhc2RmYXNkYXNkZkBnbWFpbC5jb20iLCJleHAiOjE3MzMwNjY5MzB9.yg8_tJliDHyedCMFd-PHcqRnWmO2TvT7RXCYyZfEwl4'
+```
+
+### Response
+- Status Code: 200 OK
+- Body:
+```json
+{
+    "message": "Your token has been refreshed.",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFzZGZhc2RmYXNkYXNkZkBnbWFpbC5jb20iLCJleHAiOjE3MzMwNjcwMDF9.uM4yf06UufB9W9lo1V5TPT0u2NDHifYk5VJqunIJdlU"
+}
+```

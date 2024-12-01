@@ -5,6 +5,7 @@ import (
   "sync"
   "fmt"
   "time"
+  "log"
 
   models "app/models"
   utils "app/utils"
@@ -166,7 +167,11 @@ func refreshTokenHandler(c *gin.Context) {
     return
   }
 
+  err = utils.Delete(email)
+  if err != nil {
+    log.Println("Error deleting old token :: ", err)
+  }
   utils.Set(email, token, 10*time.Minute)
-  c.JSON(http.StatusOK, gin.H{"message": "Your token has been refreshed."})
+  c.JSON(http.StatusOK, gin.H{"message": "Your token has been refreshed.", "token": token})
   return
 }
