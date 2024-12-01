@@ -53,6 +53,7 @@ func main() {
   r.POST("/signup", signupHandler)
   r.POST("/signin", signinHandler)
   r.POST("/signout", signoutHandler)
+  r.POST("/refresh", refreshTokenHandler)
   r.Run(host + ":" + port)
 
 }
@@ -89,6 +90,12 @@ func signinHandler(c *gin.Context) {
 		return
   }
 
+  token, err := utils.Get(creds.Email)
+  if err == nil {
+    c.JSON(http.StatusOK, gin.H{"message": "User has already logged in.", "token": token})
+    return
+  }
+
   user, err := models.GetUserByEmail(utils.DBInstance, creds.Email)
   if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User with this email-id does not exsists"})
@@ -101,7 +108,7 @@ func signinHandler(c *gin.Context) {
 		return
 	}
 
-  token, err := utils.GenerateLoginToken(creds.Email, jwtSecret)
+  token, err = utils.GenerateLoginToken(creds.Email, jwtSecret)
   if err != nil {
     c.JSON(http.StatusInternalServerError, gin.H{"error": "error in generating login token"})
     fmt.Println("aksdjflajksdfk ", err, jwtSecret)
@@ -140,3 +147,26 @@ func signoutHandler(c *gin.Context) {
   return
 }
 
+func refreshTokenHandler(c *gin.Context) {
+  authHeader := c.GetHeader("Authorization")
+  email, err := utils.DecodeLoginToken(authHeader, jwtSecret)
+  if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request, unable to decode your token"})
+    return
+  }
+
+  _, err = utils.Get(email)
+  if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Your Session Token has expired or the user does not exists, Please login back again"})
+    return
+  }
+  token, err := utils.GenerateLoginToken(email, jwtSecret)
+  if err != nil {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "error in renewing login token"})
+    return
+  }
+
+  utils.Set(email, token, 10*time.Minute)
+  c.JSON(http.StatusOK, gin.H{"message": "Your token has been refreshed."})
+  return
+}
