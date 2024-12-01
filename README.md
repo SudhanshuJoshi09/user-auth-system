@@ -1,6 +1,6 @@
 # User Authentication System
 
-This project implements a simple User Authentication System that integrates MySQL and Redis as databases. It provides functionalities like user creation, retrieval, updating, and deletion, along with a connection to MySQL and Redis for persistent storage and caching. 
+This project implements a simple User Authentication System that integrates MySQL and Redis as databases. It provides functionalities like user creation, login, logout, and refresh.
 
 ## Quick Start
 
