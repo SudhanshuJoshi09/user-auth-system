@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
   "sync"
+  "fmt"
+  "time"
 
   models "app/models"
   utils "app/utils"
@@ -14,6 +16,7 @@ import (
 var userStore = map[string]string{}
 var revokedTokens = map[string]bool{}
 var tokenMutext = &sync.Mutex{}
+var jwtSecret = ""
 
 
 type UserCredentials struct {
@@ -33,13 +36,13 @@ func main() {
   //
   host := utils.GetEnv("HOST")
   port := utils.GetEnv("PORT")
-  // redis_host := utils.GetEnv("REDIS_HOST")
-  // redis_password := utils.GetEnv("REDIS_PASSWORD")
-  // jwt_secret := []byte(utils.GetEnv("JWT_KEY"))
+  redis_host := utils.GetEnv("REDIS_HOST")
+  redis_password := utils.GetEnv("REDIS_PASSWORD")
+  jwtSecret = utils.GetEnv("JWT_KEY")
   db_dsn := utils.GetEnv("DB_DSN")
 
   // configuration redis-cache.
-  // utils.InitializeConfig(redis_host, redis_password, 0, 2)
+  utils.InitializeConfig(redis_host, redis_password, 0, 2)
 
   // configuring database connection and migration.
   utils.GetDBConnection(db_dsn)
@@ -48,6 +51,8 @@ func main() {
   // Routes setup
   r := gin.Default()
   r.POST("/signup", signupHandler)
+  r.POST("/signin", signinHandler)
+  r.POST("/signout", signoutHandler)
   r.Run(host + ":" + port)
 
 }
@@ -55,7 +60,7 @@ func main() {
 
 // Signup handler
 func signupHandler(c *gin.Context) {
-  var creds UserCredentials;
+  var creds UserCredentials
   if err := c.ShouldBindJSON(&creds); err != nil {
     c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
     return
@@ -84,11 +89,54 @@ func signinHandler(c *gin.Context) {
 		return
   }
 
-  user, err := models.GetUserByEmail(creds.Email)
+  user, err := models.GetUserByEmail(utils.DBInstance, creds.Email)
   if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User with this email-id does not exsists"})
 		return
   }
 
+  err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(creds.Password))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
 
+  token, err := utils.GenerateLoginToken(creds.Email, jwtSecret)
+  if err != nil {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "error in generating login token"})
+    fmt.Println("aksdjflajksdfk ", err, jwtSecret)
+    return
+  }
+
+  // Hardcoding this to 10 mins, let's have a config for this. improve the config mgmt, make it globally available
+  utils.Set(user.Email, token, 10*time.Minute)
+
+  c.JSON(http.StatusOK, gin.H{"message": "User logged in successfuly", "token": token})
+  return
 }
+
+
+// SignOut Handler
+func signoutHandler(c *gin.Context) {
+
+  authHeader := c.GetHeader("Authorization")
+  email, err := utils.DecodeLoginToken(authHeader, jwtSecret)
+  if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request, unable to decode your token"})
+    return
+  }
+
+  _, err = utils.Get(email)
+  if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Your Session Token has expired or the user does not exists, Please login back again"})
+    return
+  }
+  err = utils.Delete(email)
+  if err != nil {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "error in deleting login token"})
+    return
+  }
+  c.JSON(http.StatusOK, gin.H{"message": "User has logged out successfuly"})
+  return
+}
+

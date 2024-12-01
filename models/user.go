@@ -22,11 +22,12 @@ func GetUserByID(db *gorm.DB, id uint) (User, error) {
 	return user, result.Error
 }
 
-func GetuserByEmail(db *gorm.DB, email string) (User, error) {
+func GetUserByEmail(db *gorm.DB, email string) (User, error) {
 	var user User
-	result := db.First(&user, string)
+	result := db.First(&user, "email = ?", email)
 	return user, result.Error
 }
+
 
 func UpdateUser(db *gorm.DB, user User) error {
 	result := db.Save(&user)

@@ -5,6 +5,7 @@ import (
 	"github.com/redis/go-redis/v9"
   "sync"
   "log"
+  "time"
 )
 
 var (
@@ -37,11 +38,21 @@ func Get(key string) (string, error) {
 	return val, nil
 }
 
-func Set(key, value string) error {
-	err := client.Set(ctx, key, value, 0).Err()
+func Set(key, value string, ttl time.Duration) error {
+	err := client.Set(ctx, key, value, ttl).Err()
 	if err != nil {
 		log.Printf("Error setting the key %s: %v", key, err)
 		return err
 	}
 	return nil
+}
+
+
+func Delete(key string) error {
+  err := client.Del(ctx, key).Err()
+  if err != nil {
+    log.Printf("Error deleting the key :%s", key)
+    return err
+  }
+  return nil
 }
