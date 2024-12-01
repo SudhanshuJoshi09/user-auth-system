@@ -1,100 +1,94 @@
 package main 
 
 import (
-  // "net/http"
-  // // "sync"
-  // // "time"
-  // "fmt"
-  cutils "app/utils"
+	"net/http"
+  "sync"
+
+  models "app/models"
+  utils "app/utils"
+
+  "golang.org/x/crypto/bcrypt"
+	"github.com/gin-gonic/gin"
   )
 
+var userStore = map[string]string{}
+var revokedTokens = map[string]bool{}
+var tokenMutext = &sync.Mutex{}
+
+
+type UserCredentials struct {
+  Name     string `json:"name" binding:"required"`
+  Email    string `json:"email" binding:"required,email"`
+  Password string `json:"password" binding:"required"`
+}
+
+type LoginInput struct {
+  Email    string `json:"email" binding:"required,email"`
+  Password string `json:"password" binding:"required"`
+}
+
 func main() {    
-  cutils.LoadEnv()
+  // Load env.
+  utils.LoadEnv()
+  //
+  host := utils.GetEnv("HOST")
+  port := utils.GetEnv("PORT")
+  // redis_host := utils.GetEnv("REDIS_HOST")
+  // redis_password := utils.GetEnv("REDIS_PASSWORD")
+  // jwt_secret := []byte(utils.GetEnv("JWT_KEY"))
+  db_dsn := utils.GetEnv("DB_DSN")
 
-  host := cutils.GetEnv("HOST")
-  port := cutils.GetEnv("PORT")
-  redis_host := cutils.GetEnv("REDIS_HOST")
-  redis_password := cutils.GetEnv("REDIS_PASSWORD")
-  jwt_secret := []byte(cutils.GetEnv("JWT_KEY"))
-  db_dsn := cutils.GetEnv("DB_DSN")
+  // configuration redis-cache.
+  // utils.InitializeConfig(redis_host, redis_password, 0, 2)
 
-  cutils.InitializeConfig(redis_host, redis_password, 0, 2)
+  // configuring database connection and migration.
+  utils.GetDBConnection(db_dsn)
+  utils.Migrate()
 
-// }
+  // Routes setup
+  r := gin.Default()
+  r.POST("/signup", signupHandler)
+  r.Run(host + ":" + port)
 
-// import (
-//   "database/sql"
-//   _ "github.com/go-sql-driver/mysql"
-//   // "gorm.io/driver/mysql"
-//   // "gorm.io/gorm"
-//   "fmt"
-// )
-//
-// func main() {
-//   // sqlDB, err := sql.Open("mysql", "")
-//   // fmt.Println("akfjsdlkfjasd ", err)
-//   // gormDB, err := gorm.Open(mysql.New(mysql.Config{
-//   //   Conn: sqlDB,
-//   // }), &gorm.Config{})
-//   // fmt.Println("akfjsdlkfjasd ", err)
-//   // fmt.Println("akfjsdlkfjasd ", gormDB)
-//
-//   sqlDB, err := sql.Open("mysql", "root:@tcp(127.0.0.1:3307)/udb")
-//   err = sqlDB.Ping()
-//   if err != nil {
-//     fmt.Println("dklfajdlsfjka ", err)
-//   }
-//   defer sqlDB.Close()
-// }
+}
 
 
-// import (
-//   "fmt"
-//   models "app/models"
-//   utils "app/utils"
-// )
-//
-// func main() {
-// 	// Initialize database connection using Singleton pattern
-// 	dsn := "root:@tcp(127.0.0.1:3307)/udb"
-// 	db := utils.GetDBConnection(dsn)
-//
-// 	// Run migrations
-// 	utils.Migrate()
-//
-// 	// Create a new user
-// 	user := models.User{Name: "Sudhanshu", Email: "sudhanshujoshi49@gmail.com"}
-// 	lastID, err := models.CreateUser(db, user)
-// 	if err != nil {
-// 		fmt.Println("Error creating user:", err)
-// 	} else {
-// 		fmt.Println("User created with ID:", lastID)
-// 	}
-//
-// 	// Get the user by ID
-// 	// fetchedUser, err := models.GetUserByID(db, lastID)
-// 	//
-// 	// if err != nil {
-// 	// 	fmt.Println("Error fetching user:", err)
-// 	// } else {
-// 	// 	fmt.Println("Fetched user:", fetchedUser)
-// 	// }
-// 	//
-// 	// // Update the user
-// 	// fetchedUser.Name = "John Updated"
-// 	// err = models.UpdateUser(db, fetchedUser)
-// 	// if err != nil {
-// 	// 	fmt.Println("Error updating user:", err)
-// 	// } else {
-// 	// 	fmt.Println("User updated successfully")
-// 	// }
-// 	//
-// 	// // Delete the user
-// 	// err = models.DeleteUser(db, lastID)
-// 	// if err != nil {
-// 	// 	fmt.Println("Error deleting user:", err)
-// 	// } else {
-// 	// 	fmt.Println("User deleted successfully")
-// 	// }
-// }
+// Signup handler
+func signupHandler(c *gin.Context) {
+  var creds UserCredentials;
+  if err := c.ShouldBindJSON(&creds); err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+    return
+  }
 
+  passwordHash, err := bcrypt.GenerateFromPassword([]byte(creds.Password), bcrypt.DefaultCost)
+  if err != nil {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "error in generating password hash"})
+  }
+  user := models.User{Name: creds.Name, Email: creds.Email, PasswordHash: string(passwordHash)}
+	lastID, err := models.CreateUser(utils.DBInstance, user)
+	if err != nil {
+    c.JSON(http.StatusConflict, gin.H{"error": "User already exsists"})
+    return
+	}
+
+  c.JSON(http.StatusCreated, gin.H{"message": "User created successfuly", "UserId": lastID})
+}
+
+
+// SIgnIn Handler
+func signinHandler(c *gin.Context) {
+  var creds LoginInput
+  if err := c.ShouldBindJSON(&creds); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+  }
+
+  user, err := models.GetUserByEmail(creds.Email)
+  if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User with this email-id does not exsists"})
+		return
+  }
+
+
+}

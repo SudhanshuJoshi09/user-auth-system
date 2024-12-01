@@ -2,7 +2,6 @@ package models
 
 import (
   "gorm.io/gorm"
-  "fmt"
 )
 
 type User struct {
@@ -20,6 +19,12 @@ func CreateUser(db *gorm.DB, user User) (uint, error) {
 func GetUserByID(db *gorm.DB, id uint) (User, error) {
 	var user User
 	result := db.First(&user, id)
+	return user, result.Error
+}
+
+func GetuserByEmail(db *gorm.DB, email string) (User, error) {
+	var user User
+	result := db.First(&user, string)
 	return user, result.Error
 }
 
