@@ -4,6 +4,12 @@ This project implements a simple User Authentication System that integrates MySQ
 
 ## Quick Start
 
+### With docker-compose
+```bash
+docker-compose up
+```
+
+### Without docker-compose
 To get started with this project, follow the steps below:
 
 Clone the repository:
@@ -54,7 +60,7 @@ docker run -d --name redis-container -p 6379:6379 redis:latest
 Create a new user by providing `name`, `email`, and `password`.
 
 ```bash
-curl --location 'localhost:8082/signup' \
+curl --location 'localhost:8080/signup' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "name": "sudhanshu12",
@@ -76,7 +82,7 @@ curl --location 'localhost:8082/signup' \
 ### 2. **Login**
 Login with `email` and `password` to get user Authorization header.
 ```bash
-curl --location 'localhost:8082/signin' \
+curl --location 'localhost:8080/signin' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "email": "asdfasdfasdasdf@gmail.com",
@@ -98,7 +104,7 @@ curl --location 'localhost:8082/signin' \
 Logout from account using authorization header.
 - Header {Authorization: Login Token}
 ```bash
-curl --location 'localhost:8082/signout' \
+curl --location 'localhost:8080/signout' \
 --header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFzZGZhc2RmYXNkYXNkZkBnbWFpbC5jb20iLCJleHAiOjE3MzMwNjcwMDF9.uM4yf06UufB9W9lo1V5TPT0u2NDHifYk5VJqunIJdlU' \
 --header 'Content-Type: application/json' \
 --data-raw '{
@@ -120,7 +126,7 @@ curl --location 'localhost:8082/signout' \
 Refresh token using current authorization header.
 - Header {Authorization: Login Token}
 ```bash
-curl --location --request POST 'localhost:8082/refresh' \
+curl --location --request POST 'localhost:8080/refresh' \
 --header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFzZGZhc2RmYXNkYXNkZkBnbWFpbC5jb20iLCJleHAiOjE3MzMwNjY5MzB9.yg8_tJliDHyedCMFd-PHcqRnWmO2TvT7RXCYyZfEwl4'
 ```
 

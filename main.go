@@ -43,6 +43,7 @@ func main() {
   db_dsn := utils.GetEnv("DB_DSN")
 
   // configuration redis-cache.
+  fmt.Println("dlafkjdlfjasd ", redis_host, redis_password)
   utils.InitializeConfig(redis_host, redis_password, 0, 2)
 
   // configuring database connection and migration.
